@@ -1,5 +1,5 @@
 [package]
-name = "recuerdo-macros"
+name = "recuerdame-macros"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,6 +7,10 @@ edition = "2024"
 syn = { version = "2", features = ["full", "parsing"] }
 quote = "1"
 proc-macro2 = "1"
+
+[dev-dependencies]
+recuerdame = { path = "../recuerdame" }
+
 
 [lib]
 proc-macro = true

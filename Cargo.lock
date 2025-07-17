@@ -21,18 +21,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "recuerdo-example"
+name = "recuerdame"
 version = "0.1.0"
 dependencies = [
- "recuerdo-macros",
+ "recuerdame-macros",
 ]
 
 [[package]]
-name = "recuerdo-macros"
+name = "recuerdame-macros"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
+ "recuerdame",
  "syn",
 ]
 
