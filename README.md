@@ -163,7 +163,7 @@ assert_eq!(subtract_i8(-10, -110), 100);
 
 - **Compile Time & Binary Size:** Be mindful of your input ranges. A function like `#[precalculate(a = 0..=1000, b = 0..=1000)]` would try to create a table with over a million entries, drastically increasing compile time and binary size.
 
-- ** Panics on Out-of-Range Inputs:** The generated function performs a direct array lookup. **It will panic at runtime** if you provide an argument that is outside the range you specified in the `#[precalculate]` attribute. This is by design for maximum performance, as it avoids runtime branching. Ensure your call sites respect the defined ranges.
+- **Panics on Out-of-Range Inputs:** The generated function performs a direct array lookup. **It will panic at runtime** if you provide an argument that is outside the range you specified in the `#[precalculate]` attribute. This is by design for maximum performance, as it avoids runtime branching. Ensure your call sites respect the defined ranges.
 
 - **`const fn` Required:** The macro can only be applied to functions marked as `const fn`.
 
