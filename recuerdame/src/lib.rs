@@ -50,6 +50,15 @@ macro_rules! impl_precalc_const_int {
         }
     };
 }
+
+macro_rules! impl_precalc_const_float {
+    ($f_ty:ty) => {
+        impl PrecalcConst for $f_ty {
+            const DEFAULT: Self = 0.0;
+        }
+    };
+}
+
 impl_precalc_const_int!(usize);
 
 impl_precalc_const_int!(u8);
@@ -66,3 +75,6 @@ impl_precalc_const_int!(i64);
 
 impl_precalc_const_int!(u128);
 impl_precalc_const_int!(i128);
+
+impl_precalc_const_float!(f32);
+impl_precalc_const_float!(f64);

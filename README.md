@@ -19,6 +19,7 @@ This is ideal for computationally expensive functions with a small, discrete inp
   - [Return Types (`PrecalcConst` trait)](#return-types-precalcconst-trait)
 - [Examples](#examples)
 - [Use Cases](#use-cases)
+- [Benchmarks](#benchmarks)
 - [Limitations & Caveats](#limitations--caveats)
 - [License](#license)
 
@@ -158,6 +159,27 @@ assert_eq!(subtract_i8(-10, -110), 100);
 - **Game Development:** Lookup tables for things like falloff curves, experience points, or complex physics calculations with discrete steps.
 - **Embedded Systems:** When CPU cycles are precious and flash memory is available, replacing math-heavy functions with a lookup table can be a huge win.
 - **Cryptography:** Pre-calculating S-boxes or other fixed tables.
+
+## Benchmarks
+
+The core promise of `recuerdame` is trading compile time for a significant boost in runtime performance. The benchmarks below illustrate this by comparing a function that calculates a logistic regression value versus its pre-calculated equivalent using `recuerdame`.
+
+The benchmark results are as follows:
+
+```
+logistic regression (precalculated)
+                        time:   [843.09 ps 844.05 ps 845.12 ps]
+
+logistic regression (normal)
+                        time:   [12.267 ns 12.272 ns 12.277 ns]
+```
+
+#### Analysis
+
+- **Pre-calculated (with `recuerdame`):** The function call takes approximately **844 picoseconds**. This is effectively the cost of an array lookup.
+- **Normal `const fn`:** The standard function call takes about **12.2 nanoseconds** to perform the standard calculation.
+
+In this scenario, the `recuerdame`-powered function is over **14 times faster** than the original. This performance gap widens as the computational complexity of the target function increases, making it a powerful optimization for performance-critical code paths.
 
 ## Limitations & Caveats
 
