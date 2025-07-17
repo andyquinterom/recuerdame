@@ -40,7 +40,7 @@ Imagine you have a `const` function that performs a complex calculation. If you 
 
     ```toml
     [dependencies]
-    recuerdame = "0.1.0"
+    recuerdame = "0.2.1"
     ```
 
 2.  Annotate your `const fn` with `#[precalculate]`, specifying the inclusive range for each argument.
