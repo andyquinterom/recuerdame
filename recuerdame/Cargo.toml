@@ -6,7 +6,7 @@ authors = ["Andrés F. Quintero <afquinteromoreano@gmail.com>"]
 description = "Pre-calculate functions at compile-time rather than run-time."
 repository = "https://github.com/andyquinterom/recuerdame"
 license = "MIT"
-readme = "README.md"
+readme = "../README.md"
 
 [dependencies]
-recuerdame-macros = { path = "../recuerdame-macros" }
+recuerdame-macros = { path = "../recuerdame-macros", version = "0.1.0" }
