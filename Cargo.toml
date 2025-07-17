@@ -1,0 +1,3 @@
+[workspace]
+members = ["recuerdo-macros", "recuerdo-example"]
+resolver = "3"
