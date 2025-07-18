@@ -1,39 +1,40 @@
 pub use recuerdame_macros::precalculate;
 
+extern crate self as recuerdame;
+
 /// This trait is needed for the return types of precalculated functions.
 /// This tells the crate how to pre-populate the look-up table at compile
 /// time.
 ///
 /// Example:
 /// ```rust
-// use recuerdame::{PrecalcConst, precalculate};
-//
-// #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-// struct MyColor {
-//     r: u8,
-//     g: u8,
-//     b: u8,
-// }
-//
-// impl PrecalcConst for MyColor {
-//     const DEFAULT: Self = MyColor { r: 0, g: 0, b: 0 };
-// }
-//
-// #[precalculate(val = 0..=2)]
-// const fn get_primary_color(val: u8) -> MyColor {
-//     match val {
-//         0 => MyColor { r: 255, g: 0, b: 0 },
-//         1 => MyColor { r: 0, g: 255, b: 0 },
-//         _ => MyColor { r: 0, g: 0, b: 255 },
-//     }
-// }
-//
-// #[test]
-// fn using_custom_types_works() {
-//     assert_eq!(get_primary_color(0), MyColor { r: 255, g: 0, b: 0 });
-//     assert_eq!(get_primary_color(1), MyColor { r: 0, g: 255, b: 0 });
-//     assert_eq!(get_primary_color(2), MyColor { r: 0, g: 0, b: 255 });
-// }
+/// use recuerdame::{PrecalcConst, precalculate};
+///
+/// #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+/// struct MyColor {
+///     r: u8,
+///     g: u8,
+///     b: u8,
+/// }
+///
+/// impl PrecalcConst for MyColor {
+///     const DEFAULT: Self = MyColor { r: 0, g: 0, b: 0 };
+/// }
+///
+/// #[precalculate(val = 0..=2)]
+/// const fn get_primary_color(val: u8) -> MyColor {
+///     match val {
+///         0 => MyColor { r: 255, g: 0, b: 0 },
+///         1 => MyColor { r: 0, g: 255, b: 0 },
+///         _ => MyColor { r: 0, g: 0, b: 255 },
+///     }
+/// }
+///
+/// fn main()  {
+///     assert_eq!(get_primary_color(0), MyColor { r: 255, g: 0, b: 0 });
+///     assert_eq!(get_primary_color(1), MyColor { r: 0, g: 255, b: 0 });
+///     assert_eq!(get_primary_color(2), MyColor { r: 0, g: 0, b: 255 });
+/// }
 /// ```
 pub trait PrecalcConst {
     const DEFAULT: Self;
@@ -42,6 +43,30 @@ pub trait PrecalcConst {
 impl<T> PrecalcConst for Option<T> {
     const DEFAULT: Self = None;
 }
+
+macro_rules! impl_precalc_const_for_tuple {
+    ($($T:ident),+) => {
+        impl<$($T),*> PrecalcConst for ($($T,)*)
+        where
+            $($T: PrecalcConst,)*
+        {
+            const DEFAULT: Self = ($($T::DEFAULT,)*);
+        }
+    };
+}
+
+impl_precalc_const_for_tuple!(T1);
+impl_precalc_const_for_tuple!(T1, T2);
+impl_precalc_const_for_tuple!(T1, T2, T3);
+impl_precalc_const_for_tuple!(T1, T2, T3, T4);
+impl_precalc_const_for_tuple!(T1, T2, T3, T4, T5);
+impl_precalc_const_for_tuple!(T1, T2, T3, T4, T5, T6);
+impl_precalc_const_for_tuple!(T1, T2, T3, T4, T5, T6, T7);
+impl_precalc_const_for_tuple!(T1, T2, T3, T4, T5, T6, T7, T8);
+impl_precalc_const_for_tuple!(T1, T2, T3, T4, T5, T6, T7, T8, T9);
+impl_precalc_const_for_tuple!(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10);
+impl_precalc_const_for_tuple!(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11);
+impl_precalc_const_for_tuple!(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12);
 
 macro_rules! impl_precalc_const_int {
     ($int_ty:ty) => {
