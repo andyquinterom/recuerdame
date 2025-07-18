@@ -38,9 +38,8 @@ Imagine you have a `const` function that performs a complex calculation. If you 
 
 1.  Add `recuerdame` to your `Cargo.toml`:
 
-    ```toml
-    [dependencies]
-    recuerdame = "0.2.1"
+    ```bash
+    cargo add recuerdame
     ```
 
 2.  Annotate your `const fn` with `#[precalculate]`, specifying the inclusive range for each argument.
