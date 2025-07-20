@@ -12,9 +12,9 @@ use syn::{FnArg, ItemFn, Meta, Pat, Token, Visibility, parse_macro_input, punctu
 /// having to run complicated arithmentic at runtime.
 ///
 /// This macro supports three operating modes:
-///  - **basic**: The basic operating mode will limit the input range of the function to the ranges specified. If input outside the ranges is provided it will panic.
+///  - **fallback** (Default): The fallback operating mode never panic (unless the implementation panics). It will use the look up table for the specified ranges and use the original implementation if outside of the range.
 ///  - **option**: The option operating mode will change the function to return an [Option]. [Some] if the input is in range, [None] if not.
-///  - **keep**: The keep operating mode never panic (unless the implementation panics). It will use the look up table for the specified ranges and use the original implementation if outside of the range.
+///  - **panic**: If the input is outside of the range specified in the macro the function will panic.
 ///
 /// The option and keep modes will require additional bounds checks which may come at a cost.
 ///
@@ -34,8 +34,8 @@ use syn::{FnArg, ItemFn, Meta, Pat, Token, Visibility, parse_macro_input, punctu
 ///     a + b
 /// }
 ///
-/// #[precalculate(a = 0..=10, b = 0..=4, keep)]
-/// pub const fn add_keep(a: i32, b: i32) -> i32 {
+/// #[precalculate(a = 0..=10, b = 0..=4, panic)]
+/// pub const fn add_panic(a: i32, b: i32) -> i32 {
 ///     a + b
 /// }
 ///
@@ -43,6 +43,8 @@ use syn::{FnArg, ItemFn, Meta, Pat, Token, Visibility, parse_macro_input, punctu
 /// fn it_works() {
 ///     assert_eq!(add(8, 2), 10);
 ///     assert_eq!(add(0, 0), 0);
+///     assert_eq!(add_keep(5, 4), 9);
+///     assert_eq!(add_keep(25, 0), 25);
 /// }
 ///
 /// #[test]
@@ -52,15 +54,9 @@ use syn::{FnArg, ItemFn, Meta, Pat, Token, Visibility, parse_macro_input, punctu
 /// }
 ///
 /// #[test]
-/// fn it_works_keep() {
-///     assert_eq!(add_keep(5, 4), 9);
-///     assert_eq!(add_keep(25, 0), 25);
-/// }
-///
-/// #[test]
 /// #[should_panic]
 /// fn outside_bounds_panics() {
-///     add(25, 9);
+///     add_panic(25, 9);
 /// }
 /// ```
 #[proc_macro_attribute]
@@ -68,13 +64,14 @@ pub fn precalculate(attr: TokenStream, item: TokenStream) -> TokenStream {
     let metas: Punctuated<Meta, Token![,]> =
         parse_macro_input!(attr with Punctuated::parse_terminated);
 
-    #[derive(Debug, Hash, PartialEq, Eq)]
+    #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
     enum Options {
+        Fallback,
         Option,
-        KeepOriginal,
+        Panic,
     }
 
-    let mut options = HashSet::new();
+    let mut mode = Vec::new();
     let mut range_map = HashMap::<String, proc_macro2::TokenStream>::new();
     for meta in metas {
         match meta {
@@ -91,12 +88,9 @@ pub fn precalculate(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
             Meta::Path(opt) => {
                 match opt.to_token_stream().to_string().trim() {
-                    "option" => {
-                        options.insert(Options::Option);
-                    }
-                    "keep" => {
-                        options.insert(Options::KeepOriginal);
-                    }
+                    "option" => mode.push(Options::Option),
+                    "panic" => mode.push(Options::Panic),
+                    "fallback" => mode.push(Options::Fallback),
                     opt => panic!("Unknown option: {opt}"),
                 };
             }
@@ -104,9 +98,16 @@ pub fn precalculate(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     }
 
-    if options.contains(&Options::Option) && options.contains(&Options::KeepOriginal) {
-        panic!("precalculate macro may only take `option` or `keep` exclusively.")
-    }
+    let mode = match mode.len() {
+        0 => Options::Fallback,
+        1 => mode[0],
+        _ => {
+            panic!(
+                "precalculate macro may only take one operating mode at a time, found: {:?}.",
+                mode
+            )
+        }
+    };
 
     let mut func = parse_macro_input!(item as ItemFn);
     let visibility = func.vis.clone();
@@ -248,32 +249,29 @@ pub fn precalculate(attr: TokenStream, item: TokenStream) -> TokenStream {
                     quote! { #acc[#index_var] }
                 });
 
-        let opt_check = {
-            options.contains(&Options::Option).then(|| {
+        let mode_check = match mode {
+            Options::Panic => None,
+            Options::Fallback => Some(quote! {
+                if !(#bounds_check_expr) {
+                    return #new_func_ident(#(#func_args),*);
+                }
+            }),
+            Options::Option => {
+                // Change signature to return option
                 *return_ty.as_mut() = syn::Type::Verbatim(quote! { Option<#return_ty> });
+                // Change the table access expression to return Some
                 table_access = quote! { Some(#table_access)};
-                quote! {
+                Some(quote! {
                     if !(#bounds_check_expr) {
                         return None;
                     }
-                }
-            })
-        };
-
-        let keep_check = {
-            options.contains(&Options::KeepOriginal).then(|| {
-                quote! {
-                    if !(#bounds_check_expr) {
-                        return #new_func_ident(#(#func_args),*);
-                    }
-                }
-            })
+                })
+            }
         };
 
         quote! {
             pub const fn #func_ident(#(#fn_params),*) -> #return_ty {
-                #opt_check
-                #keep_check
+                #mode_check
                 #(#index_calcs)*
                 #table_access
             }

@@ -1,6 +1,6 @@
 use recuerdame::precalculate;
 
-#[precalculate(a = 0..=10, b = 0..=4)]
+#[precalculate(a = 0..=10, b = 0..=4, panic)]
 const fn add(a: i32, b: i32) -> i32 {
     a + b
 }
@@ -8,39 +8,39 @@ const fn add(a: i32, b: i32) -> i32 {
 const MIN_A: i16 = 0;
 const MAX_A: i16 = 100;
 
-#[precalculate(a = MIN_A..=MAX_A, b = 0..=4, c = -10..=10)]
+#[precalculate(a = MIN_A..=MAX_A, b = 0..=4, c = -10..=10, panic)]
 const fn add_3(a: i16, b: i16, c: i16) -> i32 {
     ((0.3 * a as f64) + (0.4 * b as f64) + (0.9 * c as f64)) as i32
 }
 
-#[precalculate(val = 0..=255)]
+#[precalculate(val = 0..=255, panic)]
 const fn identity_u8(val: u8) -> u8 {
     val
 }
 
-#[precalculate(a = -50..=-1, b = -127..=-100)]
+#[precalculate(a = -50..=-1, b = -127..=-100, panic)]
 const fn subtract_i8(a: i8, b: i8) -> i8 {
     a.saturating_sub(b)
 }
 
-#[precalculate(x = 0..=10, y = 1..=5)]
+#[precalculate(x = 0..=10, y = 1..=5, panic)]
 const fn multiply_usize(x: usize, y: usize) -> usize {
     x * y
 }
 
-#[precalculate(a = 5..=5, b = 0..=10)]
+#[precalculate(a = 5..=5, b = 0..=10, panic)]
 const fn single_value_range_test(a: i32, b: i32) -> i32 {
     a - b
 }
 
-#[precalculate(a = 0..=5)]
+#[precalculate(a = 0..=5, panic)]
 const fn return_option(a: u16) -> Option<u16> {
     if a % 2 == 0 { Some(a) } else { None }
 }
 
 const START: u32 = 10;
 const END: u32 = 20;
-#[precalculate(i = START..=END)]
+#[precalculate(i = START..=END, panic)]
 const fn const_range_test(i: u32) -> u32 {
     i * i
 }

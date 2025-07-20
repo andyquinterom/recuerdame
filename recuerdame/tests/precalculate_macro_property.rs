@@ -1,22 +1,22 @@
 use quickcheck_macros::quickcheck;
 use recuerdame::precalculate;
 
-#[precalculate(a = -10..=10, keep)]
+#[precalculate(a = -10..=10)]
 const fn identity_1(a: i32) -> i32 {
     a
 }
 
-#[precalculate(a = -10..=10, b = -10..=10, keep)]
+#[precalculate(a = -10..=10, b = -10..=10)]
 const fn identity_2(a: i32, b: i32) -> (i32, i32) {
     (a, b)
 }
 
-#[precalculate(a = -10..=10, b = -10..=10, c = -10..=10, keep)]
+#[precalculate(a = -10..=10, b = -10..=10, c = -10..=10)]
 const fn identity_3(a: i32, b: i32, c: i32) -> (i32, i32, i32) {
     (a, b, c)
 }
 
-#[precalculate(a = -10..=10, b = -10..=10, c = -10..=10, d = -10..=10, keep)]
+#[precalculate(a = -10..=10, b = -10..=10, c = -10..=10, d = -10..=10)]
 const fn identity_4(a: i32, b: i32, c: i32, d: i32) -> (i32, i32, i32, i32) {
     (a, b, c, d)
 }

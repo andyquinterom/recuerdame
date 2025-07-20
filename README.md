@@ -13,9 +13,9 @@ This is ideal for computationally expensive functions with a small, discrete inp
 
 - [What is `recuerdame`?](#what-is-recuerdame)
 - [Usage & Operating Modes](#usage--operating-modes)
-  - [Default Mode (Panic)](#default-mode-panic)
+  - [Fallback Mode (Default)](#fallback-mode-default)
   - [`option` Mode](#option-mode)
-  - [`keep` Mode](#keep-mode)
+  - [`panic` Mode](#panic-mode)
 - [How It Works](#how-it-works)
 - [Supported Types](#supported-types)
   - [Argument Types](#argument-types)
@@ -49,27 +49,29 @@ Imagine you have a `const` function that performs a complex calculation. If you 
 
 2.  Annotate your `const fn` with `#[precalculate]` and choose an operating mode. The macro gives you three ways to handle inputs that are outside the pre-calculated range.
 
-### Default Mode (Panic)
+### Fallback Mode (Default)
 
-This is the fastest mode. If an input is outside the specified range, it panics. Use this when you can guarantee at the call site that inputs will always be in range.
+This is the default, most flexible mode. It keeps the original function alongside the lookup table. If the inputs are in range, it uses the fast lookup table. If they are out of range, it calls the original function to compute the result on the fly. This is useful when you want fast lookups for a common "hot path" but still need to handle all other cases. This adds a small runtime cost for the bounds check.
 
 ```rust
 use recuerdame::precalculate;
 
+// "fallback" is optional, as it's the default behavior.
+// This is equivalent to `#[precalculate(a = 0..=10, b = 0..=4, fallback)]`
 #[precalculate(a = 0..=10, b = 0..=4)]
-pub const fn add(a: i32, b: i32) -> i32 {
+pub const fn add_fallback(a: i32, b: i32) -> i32 {
     a + b
 }
 
-// Works:
-assert_eq!(add(5, 2), 7);
-// Panics: 11 is outside the specified range of 0..=10
-// add(11, 0);
+// In-range uses the lookup table:
+assert_eq!(add_fallback(5, 2), 7);
+// Out-of-range calls the original function:
+assert_eq!(add_fallback(20, 0), 20);
 ```
 
 ### `option` Mode
 
-This mode wraps the function's return type in an `Option`. If the inputs are within the pre-calculated range, it returns `Some(value)`. If they are out of range, it returns `None`. This adds a small runtime cost for the bounds check.
+This mode provides safety by wrapping the function's return type in an `Option`. If the inputs are within the pre-calculated range, it returns `Some(value)`. If they are out of range, it returns `None`. This adds a small runtime cost for the bounds check.
 
 ```rust
 use recuerdame::precalculate;
@@ -82,25 +84,25 @@ pub const fn add_option(a: i32, b: i32) -> i32 {
 // Works:
 assert_eq!(add_option(5, 2), Some(7));
 // Returns None:
-assert_eq!(add_option(11, 0), None);
+assert_eq!(add_option(20, 0), None);
 ```
 
-### `keep` Mode
+### `panic` Mode
 
-This "fallback" mode keeps the original function alongside the lookup table. If the inputs are in range, it uses the fast lookup table. If they are out of range, it calls the original function to compute the result on the fly. This is useful when you want fast lookups for a common "hot path" but still need to handle all other cases. This also adds a small runtime cost for the bounds check.
+This is the fastest mode because it does not have an explicit bounds check. If an input is outside the specified range, the array access will be out of bounds, causing a panic. Use this when you can guarantee at the call site that inputs will always be in range.
 
 ```rust
 use recuerdame::precalculate;
 
-#[precalculate(a = 0..=10, b = 0..=4, keep)]
-pub const fn add_keep(a: i32, b: i32) -> i32 {
+#[precalculate(a = 0..=10, b = 0..=4, panic)]
+pub const fn add_panic(a: i32, b: i32) -> i32 {
     a + b
 }
 
-// In-range uses the lookup table:
-assert_eq!(add_keep(5, 2), 7);
-// Out-of-range calls the original function:
-assert_eq!(add_keep(11, 0), 11);
+// Works:
+assert_eq!(add_panic(5, 2), 7);
+// Panics: 20 is outside the specified range of 0..=10
+// add_panic(20, 0);
 ```
 
 ## How It Works
@@ -111,10 +113,10 @@ The `#[precalculate]` macro performs the following transformation at compile tim
 2.  It moves your original function into this module and renames it (e.g., `_add_original`).
 3.  Inside the module, it generates a `const` multi-dimensional array that will serve as the lookup table.
 4.  It generates a `const` function that populates this table by iterating through all possible input combinations and calling your original function.
-5.  Finally, it creates a new `pub const fn` with the original name (`add`). Depending on the mode, this new function either looks up the value directly, performs a bounds check before looking up, or falls back to the original function.
+5.  Finally, it creates a new `pub const fn` with the original name (`add`). Depending on the mode, this new function either performs a bounds check before looking up the value (`fallback`, `option`) or attempts the lookup directly (`panic`).
 
-This allows you to test the correctness of the macro by comparing the results:
-`assert_eq!(add(a, b), _mod_precalc_add::_add_original(a, b));`
+This allows you to test the correctness of the macro by comparing the results against the original function, which remains accessible:
+`assert_eq!(add_fallback(a, b), _mod_precalc_add_fallback::_add_fallback_original(a, b));`
 
 ## Supported Types
 
@@ -142,7 +144,7 @@ The function's return type must implement the `recuerdame::PrecalcConst` trait. 
 `recuerdame` provides out-of-the-box implementations for:
 - All integer and float primitives (defaults to `0` or `0.0`).
 - Tuples of types that implement `PrecalcConst`.
-- `Option<T>` (defaults to `None`).
+- `Option<T>` where `T` implements `PrecalcConst` (defaults to `None`).
 
 You can easily implement it for your own `const`-compatible types:
 
@@ -171,28 +173,28 @@ Here is a side-by-side comparison of how each mode behaves.
 ```rust
 use recuerdame::precalculate;
 
-// 1. Default (Panic) Mode
-#[precalculate(a = -10..=10)]
-const fn identity(a: i32) -> i32 { a }
+// 1. Fallback Mode (Default)
+#[precalculate(a = -10..=10)] // fallback is implicit
+const fn identity_fallback(a: i32) -> i32 { a }
 
 // 2. Option Mode
 #[precalculate(a = -10..=10, option)]
 const fn identity_opt(a: i32) -> i32 { a }
 
-// 3. Keep Mode
-#[precalculate(a = -10..=10, keep)]
-const fn identity_keep(a: i32) -> i32 { a }
+// 3. Panic Mode
+#[precalculate(a = -10..=10, panic)]
+const fn identity_panic(a: i32) -> i32 { a }
 
 fn main() {
-    // In-range behavior is the same (except for Option's wrapper)
-    assert_eq!(identity(5), 5);
+    // In-range behavior is consistent (except for Option's wrapper)
+    assert_eq!(identity_fallback(5), 5);
     assert_eq!(identity_opt(5), Some(5));
-    assert_eq!(identity_keep(5), 5);
+    assert_eq!(identity_panic(5), 5);
 
     // Out-of-range behavior differs
-    // identity(20) would panic!
+    assert_eq!(identity_fallback(20), 20); // falls back to original function
     assert_eq!(identity_opt(20), None);
-    assert_eq!(identity_keep(20), 20); // falls back to original function
+    // identity_panic(20) would panic!
 }
 ```
 
@@ -253,7 +255,7 @@ In this scenario, the `recuerdame`-powered function is over **14 times faster** 
 
 ## Limitations & Caveats
 
-- **Handling Out-of-Range Inputs:** Choose your operating mode carefully. The default mode **will panic** on out-of-range inputs for maximum speed. If you need to handle such cases, use the `option` or `keep` modes, which introduce a small, but measurable, runtime check.
+- **Handling Out-of-Range Inputs:** Choose your operating mode carefully. The default mode (`fallback`) provides flexibility at the cost of a small runtime check. For performance-critical paths where out-of-range inputs are impossible, use `panic`. If out-of-range inputs are possible and need to be handled explicitly, use `option`.
 
 - **Compile Time & Binary Size:** Be mindful of your input ranges. A function like `#[precalculate(a = 0..=1000, b = 0..=1000)]` would try to create a table with over a million entries, drastically increasing compile time and binary size.
 
